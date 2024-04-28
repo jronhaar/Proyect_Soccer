@@ -2,6 +2,62 @@ from tkinter import *
 import tkinter as tk
 from PIL import Image, ImageTk
 from tkinter.font import Font
+from machine import Pin, ADC
+import utime
+import framebuf
+
+# Configurar los pines GPIO para los botones y los LEDs esto puede variar
+button_pins = [15, 14, 13, 12, 11, 10]  # Pines para los botones
+led_pins = [9, 8, 7, 6, 5, 4]  # Pines para los LEDs
+potentiometer_pin = 26
+select_button_pin = 16
+
+potentiometer = ADC(Pin(potentiometer_pin))
+select_button = Pin(select_button_pin, Pin.IN, Pin.PULL_UP)
+
+# Configurar los pines como entradas para los botones
+buttons = [Pin(pin, Pin.IN, Pin.PULL_UP) for pin in button_pins]
+# Configurar los pines como salidas para los LEDs
+leds = [Pin(pin, Pin.OUT) for pin in led_pins]
+
+# Definir los personajes (jugadores y porteros)
+players = ["Jugador 1", "Jugador 2", "Jugador 3", "Jugador 4", "Jugador 5", "Jugador 6", "Jugador 7", "Jugador 8", "Jugador 9"]
+teams = ["Equipo1", "Equipo2", "Equipo3"]
+selected_player = 0
+
+
+def load_player_image(player_index):
+    team_index = player_index // 3  # Índice del equipo
+    player_number = player_index % 3 + 1  # Número del jugador dentro del equipo
+    image_path = f"Jugadores/{teams[team_index]}/Jugador{player_number}.png"
+
+    # Cargar la imagen del jugador y mostrarla en pantalla
+    with open(image_path, "rb") as f:
+        image = framebuf.FrameBuf(f.read(), width, height, framebuf.RGB565)
+    display.blit(image, 0, 0)
+
+
+# Función para manejar los botones y encender/apagar los LEDs
+def handle_buttons():
+    for i in range(6):
+        if not buttons[i].value():
+            leds[i].value(not leds[i].value())
+            utime.sleep(0.2)
+
+
+# Función para seleccionar el jugador
+def select_player():
+    global selected_player
+    if not select_button.value():
+        potentiometer_value = potentiometer.read_u16()
+        selected_player = int(potentiometer_value / 7324)  # 7324 valor max de potenciometro de 5k cambiar si es de menos
+        print(f"Jugador seleccionado: {players[selected_player]}")
+        load_player_image(selected_player)
+
+while True:
+    handle_buttons()
+    select_player()
+    utime.sleep(0.1)  # pausa para no sobrecargar el procesador
 
 # Función para cerrar las ventanas
 def Cerrar_Ventana(event):
@@ -208,3 +264,4 @@ Label_Version = Label(Ventana_Principal, text="version: 0.1", font=("Courier New
 Label_Version.place(x=0, y=0)
 
 Ventana_Principal.mainloop()
+
